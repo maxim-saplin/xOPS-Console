@@ -24,6 +24,11 @@ namespace Saplin.xOPS
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         public Double RunFlops32Bit(int iterations)
         {
+            // Single precision has 23 bit mantise which in normilized form gives 24 significant bits, i.e. ~16,7m values.
+            // The main loop uses Single as a counter and it will stop gorwing after 16.7m iterations as mantisa won't have the precision and counter will stall, endless loop will happen
+            if (iterations > 16 * 1000 * 1000) 
+                throw new ArgumentOutOfRangeException("For single precision float calculations the number of iterations can't be more than 16 millions");
+
             sw.Restart();
 
             Single counter = 0, increment = 1, max = iterations;
@@ -46,7 +51,11 @@ namespace Saplin.xOPS
 
             sw.Stop();
 
-            return ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+            var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+
+            LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: false);
+
+            return time;
         }
 
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
@@ -74,7 +83,11 @@ namespace Saplin.xOPS
 
             sw.Stop();
 
-            return ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+            var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+
+            LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: false);
+
+            return time;
         }
 
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
@@ -103,7 +116,11 @@ namespace Saplin.xOPS
 
             sw.Stop();
 
-            return ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+            var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+
+            LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: true);
+
+            return time;
         }
 
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
@@ -132,7 +149,11 @@ namespace Saplin.xOPS
 
             sw.Stop();
 
-            return ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+            var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+
+            LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: false);
+
+            return time;
         }
 
         private Stopwatch threadsStopwatch = new Stopwatch();
@@ -205,7 +226,21 @@ namespace Saplin.xOPS
             threadsDoneCountdown.Wait();
             threadsStopwatch.Stop();
 
-            return ((Double)threadsStopwatch.ElapsedTicks) / Stopwatch.Frequency;
+            var time = ((Double)threadsStopwatch.ElapsedTicks) / Stopwatch.Frequency;
+
+            LastResultGigaOPS = TimeToGigaOPS(time, iterations, threads, inops);
+
+            return time;
+        }
+
+        public double LastResultGigaOPS
+        {
+            get; private set;
+        }
+
+        public static double TimeToGigaOPS(double time, int iterations, int threads, bool inops)
+        {
+            return (double)(inops ? inopsPerIteration : flopsPerIteration) * iterations * threads / time / 1000000000;
         }
 
         ///// <summary>
