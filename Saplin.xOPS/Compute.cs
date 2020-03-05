@@ -184,6 +184,8 @@ namespace Saplin.xOPS
             threadsDoneCountdown.Signal();
         }
 
+        Thread[] thrds;
+
         /// <summary>
         /// Runs flops and inops calcuations in dedicated threads
         /// </summary>
@@ -194,7 +196,7 @@ namespace Saplin.xOPS
         public Double RunXopsMultiThreaded(int iterations, int threads, bool inops = false, bool precision64Bit = false, bool useTasks = false)
         {
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
-            var thrds = new Thread[threads]; 
+            thrds = new Thread[threads]; 
              var tasks = new Task[threads];
 
             Debug.WriteLine("Multi-" + (useTasks ? "Tasks" : "Threads"));
@@ -314,6 +316,19 @@ namespace Saplin.xOPS
         public static int CpuCores
         {
             get { return Environment.ProcessorCount; }
+        }
+
+        public void AbortMultiThreadedExecution()
+        {
+            if (thrds != null)
+            {
+                foreach (var t in thrds)
+                {
+                    t.Abort();
+                }
+                threadsReadyCountdown.Reset(0);
+                threadsDoneCountdown.Reset(0);
+            }
         }
     }
 }
