@@ -15,6 +15,6 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="$(ConfigurationName) == Release">
-    <Copy SourceFiles="$(TargetDir)\Saplin.xOPS.dll" DestinationFolder="$(SolutionDir)\..\Saplin.xOPS.App\References\" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(TargetDir)\Saplin.xOPS.dll" DestinationFolder="$(SolutionDir)\..\xOPS-App\References\" OverwriteReadOnlyFiles="true" />
   </Target>
 </Project>

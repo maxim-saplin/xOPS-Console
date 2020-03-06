@@ -81,7 +81,7 @@ namespace xOPS_Console
             {
                 if (inops && threads == 1)
                 {
-                    if (precision64Bit) times[i] = c.RunInops64Bit(n); else times[i] = c.RunInops32Bit(n);
+                    times[i] = c.RunXops(n, inops, precision64Bit);
                     gxops[i] = (double)Compute.inopsPerIteration * n / times[i] / 1000000000;
                 }
                 else if (inops && threads > 1)
@@ -91,7 +91,7 @@ namespace xOPS_Console
                 }
                 else if (!inops && threads == 1)
                 {
-                    if (precision64Bit) times[i] = c.RunFlops64Bit(n); else times[i] = c.RunFlops32Bit(n);
+                    times[i] = c.RunXops(n, inops, precision64Bit);
                     gxops[i] = (double)Compute.flopsPerIteration * n / times[i] / 1000000000;
                 }
                 else if (!inops && threads > 1)
