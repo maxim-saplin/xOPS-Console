@@ -12,8 +12,8 @@ namespace Saplin.xOPS
     /// </summary>
     public class Compute
     {
-        public const int flopsPerIteration = 30; // to be determined based on IL disassembly
-        public const int inopsPerIteration = 34;  // to be determined based on IL disassembly
+        public const int flopsPerIteration = 34; // to be determined based on IL disassembly
+        public const int inopsPerIteration = 38;  // to be determined based on IL disassembly
 
         protected Single prevSingleY;
         protected Double prevDoubleY;
@@ -77,38 +77,38 @@ namespace Saplin.xOPS
                 throw new ArgumentOutOfRangeException("For single precision float calculations the number of iterations can't be more than 16 millions");
 
             Single counter = 0, increment = 1, max = iterations;
-            Single startValue = -(Single)Math.PI, endValue = (Single)Math.PI, x = startValue, x2, y = 0, pi2 = (Single)(Math.PI * Math.PI);
+            Single startValue = -(Single)Math.PI, endValue = (Single)Math.PI, x = startValue, x2, y = 0, pi2 = (Single)(Math.PI * Math.PI), four = 4;
             Single funcInc = (endValue - startValue) / iterations;
 
             sw.Start();
             // Changes to the body of the loop must be refelected in flopsPerIteration const
             while (counter < max)
             {
-                counter += increment;
+                counter = counter + increment;
 
                 x2 = x * x;
-                y = (pi2 - 4 * x2);
-                y /= (pi2 + x2);
-                //y = Math.Abs(y);
-                x += funcInc;
+
+                //y = (pi2 - 4 * x2);
+                y = four * x2;
+                y = pi2 - y;
+
+                //y /= (pi2 + x2);
+                x2 = pi2 + x2;
+                y = y / x2;
+
+                x = x + funcInc;
             }
 
             sw.Stop();
 
             prevDoubleY = y;
-
-            //var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
-
-            //LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: false);
-
-            //return time;
         }
 
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private void RunFlops64Bit(int iterations)
         {
             Double counter = 0, increment = 1, max = iterations;
-            Double startValue = -(Double)Math.PI, endValue = (Double)Math.PI, x = startValue, x2, y = 0, pi2 = (Double)(Math.PI * Math.PI);
+            Double startValue = -(Double)Math.PI, endValue = (Double)Math.PI, x = startValue, x2, y = 0, pi2 = (Double)(Math.PI * Math.PI), four = 4;
             Double funcInc = (endValue - startValue) / iterations;
 
             sw.Start();
@@ -116,31 +116,31 @@ namespace Saplin.xOPS
             // Changes to the body of the loop must be refelected in flopsPerIteration const
             while (counter < max)
             {
-                counter += increment;
+                counter = counter + increment;
 
                 x2 = x * x;
-                y = (pi2 - 4 * x2);
-                y /= (pi2 + x2);
-                //y = Math.Abs(y);
-                x += funcInc;
+
+                //y = (pi2 - 4 * x2);
+                y = four * x2;
+                y = pi2 - y;
+
+                //y /= (pi2 + x2);
+                x2 = pi2 + x2;
+                y = y / x2;
+
+                x = x + funcInc;
             }
 
             sw.Stop();
 
             prevDoubleY = y;
-
-            //var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
-
-            //LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: false);
-
-            //return time;
         }
 
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private void RunInops32Bit(int iterations)
         {
             Int32 counter = 0, increment = 1, max = iterations;
-            Int32 x = Int32.MinValue, x2, y = 0, coef = 3;
+            Int32 x = Int32.MinValue, x2, y = 0, coef = 3, four = 4, two = 2;
             Int32 funcInc = (Int32)((UInt32.MaxValue) / (Int32)iterations);
 
             sw.Start();
@@ -148,14 +148,22 @@ namespace Saplin.xOPS
             // Changes to the body of the loop must be refelected in inopsPerIteration const
             while (counter < max)
             {
-                counter += increment;
+                counter = counter + increment;
 
-                x2 = x/2;
-                y = (coef - 4 * x2);
-                y /= (coef + x2);
-                y -= coef;
-                //y = Math.Abs(y);
-                x += funcInc;
+                x2 = x/two;
+
+                //y = (coef - 4 * x2);
+                y = four * x2;
+                y = coef - y;
+
+                //y /= (coef + x2);
+                x2 = coef + x2;
+                y = y / x2;
+
+                //y -= coef;
+                y = y - coef;
+
+                x = x + funcInc;
             }
 
             sw.Stop();
@@ -167,7 +175,7 @@ namespace Saplin.xOPS
         private void RunInops64Bit(int iterations)
         {
             Int64 counter = 0, increment = 1, max = iterations;
-            Int64 x = Int64.MinValue, x2, y = 0, coef = 3;
+            Int64 x = Int64.MinValue, x2, y = 0, coef = 3, four = 4, two = 2;
             Int64 funcInc = (Int64)(UInt64.MaxValue / (UInt64)iterations);
             
             sw.Start();
@@ -175,25 +183,27 @@ namespace Saplin.xOPS
             // Changes to the body of the loop must be refelected in inopsPerIteration const
             while (counter < max)
             {
-                counter += increment;
+                counter = counter + increment;
 
-                x2 = x / 2;
-                y = (coef - 4 * x2);
-                y /= (coef + x2);
-                y -= coef;
-                //y = Math.Abs(y);
-                x += funcInc;
+                x2 = x / two;
+
+                //y = (coef - 4 * x2);
+                y = four * x2;
+                y = coef - y;
+
+                //y /= (coef + x2);
+                x2 = coef + x2;
+                y = y / x2;
+
+                //y -= coef;
+                y = y - coef;
+
+                x = x + funcInc;
             }
 
             sw.Stop();
 
             prevInt64Y = y;
-                       
-            //var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
-
-            //LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: false);
-
-            //return time;
         }
 
         private Stopwatch threadsStopwatch = new Stopwatch();
@@ -281,7 +291,7 @@ namespace Saplin.xOPS
             }
 
             threadsReadyCountdown.Wait();
-            // Starting stopwatch after Set() leads to spkes in 
+            // Starting stopwatch after Set() leads to spkes in results on Windows, might be issue due to thread scheduling (starting timer might happer after thread is started)
             threadsStopwatch.Restart();
             startThreads.Set();
 
@@ -323,12 +333,6 @@ namespace Saplin.xOPS
                 
                 threadsReadyCountdown.Reset(0);
                 threadsDoneCountdown.Reset(0);
-
-                //foreach (var t in thrds)
-                //{
-                //    t.Abort();
-                //}
-
             }
         }
     }
