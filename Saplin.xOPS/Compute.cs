@@ -30,10 +30,15 @@ namespace Saplin.xOPS
             breakCalled = false;
             var blocks = iterations / microIterationSize;
             var currIterations = microIterationSize;
+            double time = 0;
+            int i;
 
             sw.Reset();
 
-            for (var i = 0; i <= blocks; i++)
+            double accum = 0;
+            long prevElapsed = 0;
+
+            for (i = 0; i <= blocks; i++)
             {
                 if ((breakCalled && !runningInMtMode) || (mtBreakCalled && runningInMtMode)) return -1d;
 
@@ -59,11 +64,17 @@ namespace Saplin.xOPS
                 {
                     RunFlops32Bit(currIterations);
                 }
-            }
 
-            var time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
+                time = ((Double)(sw.ElapsedTicks - prevElapsed)) / Stopwatch.Frequency;
+                accum += TimeToGigaOPS(time, microIterationSize, 1, inops: inops);
+                prevElapsed = sw.ElapsedTicks
+;            }
+
+            time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
 
             LastResultGigaOPS = TimeToGigaOPS(time, iterations, 1, inops: inops);
+
+            LastResultSTGigaOPSAveraged = accum/i;
 
             return time;
         }
@@ -308,6 +319,15 @@ namespace Saplin.xOPS
         }
 
         public double LastResultGigaOPS
+        {
+            get; private set;
+        }
+
+        /// <summary>
+        /// In Single Threaded calculations measure average of each individual run's GFLOPS, rather than divide time it took to complete all runs
+        /// by the number of operations. Less influence of freezes that might happen during a single run on the overal result 
+        /// </summary>
+        public double LastResultSTGigaOPSAveraged
         {
             get; private set;
         }
