@@ -324,8 +324,9 @@ namespace Saplin.xOPS
         }
 
         /// <summary>
-        /// In Single Threaded calculations measure average of each individual run's GFLOPS, rather than divide time it took to complete all runs
-        /// by the number of operations. Less influence of freezes that might happen during a single run on the overal result 
+        /// In Single Threaded calculations measure average of each individual run's GFLOPS, rather than divide time it took to complete all subruns
+        /// by the number of operations. Less influence of freezes that might happen during a single run on the overal result. Supposed to be more stable
+        /// compared to LastResultGigaOPS
         /// </summary>
         public double LastResultSTGigaOPSAveraged
         {
