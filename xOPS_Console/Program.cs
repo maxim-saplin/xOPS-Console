@@ -2,16 +2,42 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Environments;
+using BenchmarkDotNet.Running;
 using Saplin.xOPS;
 
 namespace xOPS_Console
 {
-    class Program
+    [DisassemblyDiagnoser]
+    //[KeepBenchmarkFiles]
+    //[Config(typeof(Config))]
+    [DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Mono)]
+    //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Net472)]
+    //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.NetCoreApp31)]
+    public class Program
     {
+
+        //private class Config : ManualConfig
+        //{
+        //    public Config()
+        //    {
+        //        Add(DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator));
+        //    }
+        //}
+
+        //static void Main()
+        //{
+        //    var config = DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator);
+        //    BenchmarkRunner.Run<Program>(config);
+        //}
+
+        static Compute c = new Compute();
+
         static void Main(string[] args)
         {
-            var c = new Compute();
-            int n = 10 * 1000 * 1000;
+            int n = 50 * 1000 * 1000;
 
             Run(c, n, 1, inops: false, precision64Bit: false, useTasks: false);
             Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
@@ -23,21 +49,7 @@ namespace xOPS_Console
             ThreadPool.GetMaxThreads(out tpT, out tpP);
             Console.WriteLine("\nCores: " + Environment.ProcessorCount + ";  pool threads: " + tpT + "; ports: " + tpP + "; timer freq: " + Stopwatch.Frequency);
 
-            var threads = 4;
-
-            Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
-            Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
-            Run(c, n, threads, inops: true, precision64Bit: false, useTasks: false);
-            Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
-
-            threads = 8;
-
-            Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
-            Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
-            Run(c, n, threads, inops: true, precision64Bit: false, useTasks: false);
-            Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
-
-            threads = 32;
+            var threads = 24;
 
             Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
             Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
@@ -82,7 +94,8 @@ namespace xOPS_Console
                 if (inops && threads == 1)
                 {
                     times[i] = c.RunXops(n, inops, precision64Bit);
-                    gxops[i] = (double)Compute.inopsPerIteration * n / times[i] / 1000000000;
+                    gxops[i] = c.LastResultSTGigaOPSAveraged;
+                    //gxops[i] = (double)Compute.inopsPerIteration * n / times[i] / 1000000000;
                 }
                 else if (inops && threads > 1)
                 {
@@ -92,7 +105,8 @@ namespace xOPS_Console
                 else if (!inops && threads == 1)
                 {
                     times[i] = c.RunXops(n, inops, precision64Bit);
-                    gxops[i] = (double)Compute.flopsPerIteration * n / times[i] / 1000000000;
+                    gxops[i] = c.LastResultSTGigaOPSAveraged;
+                    //gxops[i] = (double)Compute.flopsPerIteration * n / times[i] / 1000000000;
                 }
                 else if (!inops && threads > 1)
                 {
@@ -104,6 +118,18 @@ namespace xOPS_Console
             }
 
             Console.WriteLine("\n{1:0.00} {0}, {2:0.00}ms - averages", inops ? "G_INOPS" : "G_FLOPS" , gxops.Average(), times.Average()*1000);
+        }
+
+        [Benchmark]
+        public void RunFloat32()
+        {
+            var res = c.RunXops(1000000000, false, false);
+        }
+
+        [Benchmark]
+        public void RunIntt32()
+        {
+            var res = c.RunXops(1000000000, false, false);
         }
 
     }

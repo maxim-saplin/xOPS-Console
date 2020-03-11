@@ -12,8 +12,8 @@ namespace Saplin.xOPS
     /// </summary>
     public class Compute
     {
-        public const int flopsPerIteration = 34; // to be determined based on IL disassembly
-        public const int inopsPerIteration = 38;  // to be determined based on IL disassembly
+        public const int flopsPerIteration = 47;//34; // to be determined based on IL disassembly
+        public const int inopsPerIteration = 23;//30  // to be determined based on IL disassembly
 
         protected Single prevSingleY;
         protected Double prevDoubleY;
@@ -67,8 +67,8 @@ namespace Saplin.xOPS
 
                 time = ((Double)(sw.ElapsedTicks - prevElapsed)) / Stopwatch.Frequency;
                 accum += TimeToGigaOPS(time, microIterationSize, 1, inops: inops);
-                prevElapsed = sw.ElapsedTicks
-;            }
+                prevElapsed = sw.ElapsedTicks;
+            }
 
             time = ((Double)sw.ElapsedTicks) / Stopwatch.Frequency;
 
@@ -95,16 +95,32 @@ namespace Saplin.xOPS
             // Changes to the body of the loop must be refelected in flopsPerIteration const
             while (counter < max)
             {
+                //counter = counter + increment;
+
+                //x2 = x * x;
+
+                //y = four * x2;
+                //y = pi2 - y;
+
+                //x2 = pi2 + x2;
+                //y = y / x2;
+
+                //x = x + funcInc;
+
                 counter = counter + increment;
 
                 x2 = x * x;
+                x = x + funcInc;
 
-                //y = (pi2 - 4 * x2);
                 y = four * x2;
-                y = pi2 - y;
+                x = x - funcInc;
 
-                //y /= (pi2 + x2);
                 x2 = pi2 + x2;
+                x = x + funcInc;
+
+                y = pi2 - y;
+                x = x - funcInc;
+
                 y = y / x2;
 
                 x = x + funcInc;
@@ -130,13 +146,17 @@ namespace Saplin.xOPS
                 counter = counter + increment;
 
                 x2 = x * x;
+                x = x + funcInc;
 
-                //y = (pi2 - 4 * x2);
                 y = four * x2;
-                y = pi2 - y;
+                x = x - funcInc;
 
-                //y /= (pi2 + x2);
                 x2 = pi2 + x2;
+                x = x + funcInc;
+
+                y = pi2 - y;
+                x = x - funcInc;
+
                 y = y / x2;
 
                 x = x + funcInc;
@@ -147,7 +167,7 @@ namespace Saplin.xOPS
             prevDoubleY = y;
         }
 
-        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
         private void RunInops32Bit(int iterations)
         {
             Int32 counter = 0, increment = 1, max = iterations;
@@ -159,22 +179,28 @@ namespace Saplin.xOPS
             // Changes to the body of the loop must be refelected in inopsPerIteration const
             while (counter < max)
             {
+                //counter = counter + increment;
+
+                //x2 = x/two;
+
+                //y = four * x2;
+                //y = coef - y;
+                //x2 = coef + x2;
+                //y = y / x2;
+                //y = y - coef;
+
+                //x = x + funcInc;
+
                 counter = counter + increment;
 
-                x2 = x/two;
-
-                //y = (coef - 4 * x2);
-                y = four * x2;
-                y = coef - y;
-
-                //y /= (coef + x2);
-                x2 = coef + x2;
-                y = y / x2;
-
-                //y -= coef;
-                y = y - coef;
-
-                x = x + funcInc;
+                x = counter % two;
+                y = x - four;
+                x2 = x * x;
+                y = x2 / two;
+                x = y >> 2;
+                x2 = x << 3;
+                //y = x2 + coef;
+                //x = Math.Abs(y);
             }
 
             sw.Stop();
@@ -196,20 +222,12 @@ namespace Saplin.xOPS
             {
                 counter = counter + increment;
 
-                x2 = x / two;
-
-                //y = (coef - 4 * x2);
-                y = four * x2;
-                y = coef - y;
-
-                //y /= (coef + x2);
-                x2 = coef + x2;
-                y = y / x2;
-
-                //y -= coef;
-                y = y - coef;
-
-                x = x + funcInc;
+                x = counter % two;
+                y = x - four;
+                x2 = x * x;
+                y = x2 / two;
+                x = y >> 2;
+                x2 = x << 3;
             }
 
             sw.Stop();
