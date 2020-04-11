@@ -35,6 +35,8 @@ namespace xOPS_Console
 
         static Compute c = new Compute();
 
+        private static ManualResetEventSlim stressTestEnd;
+
         static void Main(string[] args)
         {
             int n = 50 * 1000 * 1000;
@@ -59,9 +61,34 @@ namespace xOPS_Console
             Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
 
 
-            Console.WriteLine("Press any key to Quit");
-            Console.ReadKey();
+            Console.WriteLine("Press 'S' to start a Stress test, any other key to Quit");
+            var key = Console.ReadKey();
+
+            if (key.Key == ConsoleKey.S)
+            {
+                Console.WriteLine("\nStarting Stress test on {0} threads... \nPress any key to stop\n", Environment.ProcessorCount*2);
+
+                Console.WriteLine("Duration:  (Warming up)");
+                Console.WriteLine("Start:");
+                Console.WriteLine("Now:");
+                Console.WriteLine("Min:");
+                Console.WriteLine("Max:");
+
+                stressTestLinesToReturn = 5;
+
+                stressTestEnd = new ManualResetEventSlim(false);
+
+                var stressTest = new StressTest(Environment.ProcessorCount) { SamplingPeriodMs = 1000, WarmpUpSamples = 0 };
+                stressTest.ResultsUpdated += StressTestUpdate;
+                stressTest.Start();
+
+                stressTestEnd.Wait();
+  
+                Console.WriteLine("\n Stres test ended");
+            }
         }
+
+        private static int stressTestLinesToReturn = 0;
 
         private static void Run(Compute c, int n, int threads, bool inops, bool precision64Bit, bool useTasks)
         {
@@ -107,6 +134,67 @@ namespace xOPS_Console
             }
 
             Console.WriteLine("\n{1:0.00} {0}, {2:0.00}ms - averages", inops ? "G_INOPS" : "G_FLOPS" , gxops.Average(), times.Average()*1000);
+        }
+
+        private static bool graphLinesUpdated = false;
+
+        public static void StressTestUpdate(ContinuousRun sender)
+        {
+            if (!sender.WarmpingUp)
+            {
+                const string fs = "{0:0.00} GFLOPS \t\t{1:0.00} GINOPS";
+
+                try
+                {
+                    if (sender.TimeSeries[0].Results.Count < 2) return;
+
+                    var graphWidth = Console.WindowWidth / 2 - 2;
+
+                    var graph0 = AsciiTimeSeries.SeriesToLines(sender.TimeSeries[0].Results,
+                        new AsciiOptions { HeigthLines = 10, MaxWidthCharacters = graphWidth, LabelFormat = "0.00" },
+                        sender.TimeSeries[0].MinValue,
+                        sender.TimeSeries[0].MaxValue);
+
+                    var graph1 = AsciiTimeSeries.SeriesToLines(sender.TimeSeries[1].Results,
+                        new AsciiOptions { HeigthLines = 10, MaxWidthCharacters = graphWidth, LabelFormat = "0.00" },
+                        sender.TimeSeries[1].MinValue,
+                        sender.TimeSeries[1].MaxValue);
+
+                    var graphs = AsciiTimeSeries.MergeTwoGraphs(graph0, graph1, "  ", graphWidth);
+
+                    Console.CursorTop -= stressTestLinesToReturn;
+
+                    Console.CursorLeft = 10;
+                    Console.WriteLine(sender.Elapsed.ToString());
+                    Console.CursorLeft = 10;
+                    Console.WriteLine(fs, sender.TimeSeries[0].StartValue, sender.TimeSeries[1].StartValue);
+                    Console.CursorLeft = 10;
+                    Console.WriteLine(fs, sender.TimeSeries[0].CurrentValue, sender.TimeSeries[1].CurrentValue);
+                    Console.CursorLeft = 10;
+                    Console.WriteLine(fs, sender.TimeSeries[0].MinValue, sender.TimeSeries[1].MinValue);
+                    Console.CursorLeft = 10;
+                    Console.WriteLine(fs, sender.TimeSeries[0].MaxValue, sender.TimeSeries[1].MaxValue);
+
+                    Console.WriteLine(graphs);
+
+                    if (!graphLinesUpdated)
+                    {
+                        stressTestLinesToReturn += 10;
+                        graphLinesUpdated = true;
+                    }
+                }
+                catch(Exception ex)
+                {
+
+                }
+
+            }
+
+            if (Console.KeyAvailable)
+            {
+                sender.Stop();
+                stressTestEnd.Set();
+            }
         }
 
         [Benchmark]
