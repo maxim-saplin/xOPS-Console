@@ -307,6 +307,8 @@ namespace Saplin.xOPS
                 LastResultGigaOPS = TimeToGigaOPS(time, iterations, threads, inops);
 
                 runningInMtMode = false;
+
+                return time;
             }
 
             return -1;

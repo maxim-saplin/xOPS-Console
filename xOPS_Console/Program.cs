@@ -66,7 +66,7 @@ namespace xOPS_Console
 
             if (key.Key == ConsoleKey.S)
             {
-                Console.WriteLine("\nStarting Stress test on {0} threads... \nPress any key to stop\n", Environment.ProcessorCount*2);
+                Console.WriteLine("\nStarting Stress test on {0} threads... \nPress any key to stop\n", Environment.ProcessorCount * 2);
 
                 Console.WriteLine("Duration:  (Warming up)");
                 Console.WriteLine("Start:");
@@ -83,8 +83,8 @@ namespace xOPS_Console
                 stressTest.Start();
 
                 stressTestEnd.Wait();
-  
-                Console.WriteLine("\n Stres test ended");
+
+                Console.WriteLine("\n Stress test ended");
             }
         }
 
@@ -133,7 +133,7 @@ namespace xOPS_Console
                 Console.Write("{0:0.00}; ", gxops[i]);
             }
 
-            Console.WriteLine("\n{1:0.00} {0}, {2:0.00}ms - averages", inops ? "G_INOPS" : "G_FLOPS" , gxops.Average(), times.Average()*1000);
+            Console.WriteLine("\n{1:0.00} {0}, {2:0.00}ms - averages", inops ? "G_INOPS" : "G_FLOPS", gxops.Average(), times.Average() * 1000);
         }
 
         private static bool graphLinesUpdated = false;
@@ -144,50 +144,42 @@ namespace xOPS_Console
             {
                 const string fs = "{0:0.00} GFLOPS \t\t{1:0.00} GINOPS";
 
-                try
+                if (sender.TimeSeries[0].Results.Count < 2) return;
+
+                var graphWidth = Console.WindowWidth / 2 - 2;
+
+                var graph0 = AsciiTimeSeries.SeriesToLines(sender.TimeSeries[0].Results,
+                    new AsciiOptions { HeigthLines = 10, MaxWidthCharacters = graphWidth, LabelFormat = "0.00" },
+                    sender.TimeSeries[0].MinValue,
+                    sender.TimeSeries[0].MaxValue);
+
+                var graph1 = AsciiTimeSeries.SeriesToLines(sender.TimeSeries[1].Results,
+                    new AsciiOptions { HeigthLines = 10, MaxWidthCharacters = graphWidth, LabelFormat = "0.00" },
+                    sender.TimeSeries[1].MinValue,
+                    sender.TimeSeries[1].MaxValue);
+
+                var graphs = AsciiTimeSeries.MergeTwoGraphs(graph0, graph1, "  ", graphWidth);
+
+                Console.CursorTop -= stressTestLinesToReturn;
+
+                Console.CursorLeft = 10;
+                Console.WriteLine(sender.Elapsed.ToString());
+                Console.CursorLeft = 10;
+                Console.WriteLine(fs, sender.TimeSeries[0].StartValue, sender.TimeSeries[1].StartValue);
+                Console.CursorLeft = 10;
+                Console.WriteLine(fs, sender.TimeSeries[0].CurrentValue, sender.TimeSeries[1].CurrentValue);
+                Console.CursorLeft = 10;
+                Console.WriteLine(fs, sender.TimeSeries[0].MinValue, sender.TimeSeries[1].MinValue);
+                Console.CursorLeft = 10;
+                Console.WriteLine(fs, sender.TimeSeries[0].MaxValue, sender.TimeSeries[1].MaxValue);
+
+                Console.WriteLine(graphs);
+
+                if (!graphLinesUpdated)
                 {
-                    if (sender.TimeSeries[0].Results.Count < 2) return;
-
-                    var graphWidth = Console.WindowWidth / 2 - 2;
-
-                    var graph0 = AsciiTimeSeries.SeriesToLines(sender.TimeSeries[0].Results,
-                        new AsciiOptions { HeigthLines = 10, MaxWidthCharacters = graphWidth, LabelFormat = "0.00" },
-                        sender.TimeSeries[0].MinValue,
-                        sender.TimeSeries[0].MaxValue);
-
-                    var graph1 = AsciiTimeSeries.SeriesToLines(sender.TimeSeries[1].Results,
-                        new AsciiOptions { HeigthLines = 10, MaxWidthCharacters = graphWidth, LabelFormat = "0.00" },
-                        sender.TimeSeries[1].MinValue,
-                        sender.TimeSeries[1].MaxValue);
-
-                    var graphs = AsciiTimeSeries.MergeTwoGraphs(graph0, graph1, "  ", graphWidth);
-
-                    Console.CursorTop -= stressTestLinesToReturn;
-
-                    Console.CursorLeft = 10;
-                    Console.WriteLine(sender.Elapsed.ToString());
-                    Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].StartValue, sender.TimeSeries[1].StartValue);
-                    Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].CurrentValue, sender.TimeSeries[1].CurrentValue);
-                    Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].MinValue, sender.TimeSeries[1].MinValue);
-                    Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].MaxValue, sender.TimeSeries[1].MaxValue);
-
-                    Console.WriteLine(graphs);
-
-                    if (!graphLinesUpdated)
-                    {
-                        stressTestLinesToReturn += 10;
-                        graphLinesUpdated = true;
-                    }
+                    stressTestLinesToReturn += 10;
+                    graphLinesUpdated = true;
                 }
-                catch(Exception ex)
-                {
-
-                }
-
             }
 
             if (Console.KeyAvailable)
