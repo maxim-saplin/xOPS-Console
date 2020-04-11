@@ -2,17 +2,23 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <!-- Required for disasm by BenchmarkDotNet -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+        
     <!--<TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>-->
     <TargetFramework>netcoreapp3.1</TargetFramework>
         
-  <!-- <PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
-    <RuntimeIdentifier>osx-x64</RuntimeIdentifier> -->
+   <!-- <PublishTrimmed>true</PublishTrimmed>-->
+   <!-- <PublishSingleFile>true</PublishSingleFile>-->
+   <!-- <RuntimeIdentifier>osx-x64</RuntimeIdentifier>-->
     
 <!--    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
 <!--    <RuntimeIdentifier>win-x86</RuntimeIdentifier>-->
 <!--    <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
 
+    <ReleaseVersion>1.1.0</ReleaseVersion>
   </PropertyGroup>
 
 
@@ -35,5 +41,8 @@
   <ItemGroup>
     <Compile Remove="AsciiChart\AsciiChart.cs" />
     <Compile Remove="AsciiChart\Options.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
   </ItemGroup>
 </Project>

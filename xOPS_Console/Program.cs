@@ -10,28 +10,41 @@ using Saplin.xOPS;
 
 namespace xOPS_Console
 {
-    [DisassemblyDiagnoser]
+    [DisassemblyDiagnoser(printSource: true, printInstructionAddresses:true, exportHtml: true, maxDepth: 4)]
     //[KeepBenchmarkFiles]
     //[Config(typeof(Config))]
-    [DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Mono)]
+    //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Mono)]
     //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Net472)]
-    //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.NetCoreApp31)]
+    [DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.NetCoreApp31)]
     public class Program
     {
 
-        //private class Config : ManualConfig
-        //{
-        //    public Config()
+        //    private class Config : ManualConfig
         //    {
-        //        Add(DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator));
+        //        public Config()
+        //        {
+        //            Add(DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator));
+        //        }
         //    }
-        //}
 
         //static void Main()
         //{
-        //    var config = DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator);
-        //    BenchmarkRunner.Run<Program>(config);
+        //    //var config = DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator);
+        //    //BenchmarkRunner.Run<Program>(config);
+        //    BenchmarkRunner.Run<Program>();
         //}
+
+        //[Benchmark]
+        //public void RunFloat32()
+        //{
+        //    var res = c.RunXops(1000000000, false, false);
+        //}
+
+        [Benchmark]
+        public void RunIntt32()
+        {
+            var res = c.RunXops(10000000, false, false);
+        }
 
         static Compute c = new Compute();
 
@@ -45,8 +58,8 @@ namespace xOPS_Console
 
             Run(c, n, 1, inops: false, precision64Bit: false, useTasks: false);
             Run(c, n, 1, inops: true, precision64Bit: false, useTasks: false);
-            Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
-            Run(c, n, 1, inops: true, precision64Bit: true, useTasks: false);
+            //Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
+            //Run(c, n, 1, inops: true, precision64Bit: true, useTasks: false);
 
             int tpT, tpP;
 
@@ -57,8 +70,8 @@ namespace xOPS_Console
 
             Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
             Run(c, n, threads, inops: true, precision64Bit: false, useTasks: false);
-            Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
-            Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
+            //Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
+            //Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
 
 
             Console.WriteLine("Press 'S' to start a Stress test, any other key to Quit");
@@ -167,11 +180,11 @@ namespace xOPS_Console
                 Console.CursorLeft = 10;
                 Console.WriteLine(fs, sender.TimeSeries[0].StartValue, sender.TimeSeries[1].StartValue);
                 Console.CursorLeft = 10;
-                Console.WriteLine(fs, sender.TimeSeries[0].CurrentValue, sender.TimeSeries[1].CurrentValue);
-                Console.CursorLeft = 10;
                 Console.WriteLine(fs, sender.TimeSeries[0].MinValue, sender.TimeSeries[1].MinValue);
                 Console.CursorLeft = 10;
                 Console.WriteLine(fs, sender.TimeSeries[0].MaxValue, sender.TimeSeries[1].MaxValue);
+                Console.CursorLeft = 10;
+                Console.WriteLine(fs, sender.TimeSeries[0].CurrentValue, sender.TimeSeries[1].CurrentValue);
 
                 Console.WriteLine(graphs);
 
@@ -187,18 +200,6 @@ namespace xOPS_Console
                 sender.Stop();
                 stressTestEnd.Set();
             }
-        }
-
-        [Benchmark]
-        public void RunFloat32()
-        {
-            var res = c.RunXops(1000000000, false, false);
-        }
-
-        [Benchmark]
-        public void RunIntt32()
-        {
-            var res = c.RunXops(1000000000, false, false);
         }
 
     }

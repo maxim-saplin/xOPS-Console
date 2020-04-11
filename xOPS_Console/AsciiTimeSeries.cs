@@ -259,9 +259,6 @@ namespace xOPS_Console
 
         public string LabelFormat { get; set; } = "0.00";
 
-        int labelLeftMargin = 1;
-        int labelRightMargin = 1;
-
         public int LabelLeftMargin { get; set; } = 1;
 
         public int LabelRightMargin { get; set; } = 1;
