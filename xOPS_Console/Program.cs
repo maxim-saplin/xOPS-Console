@@ -2,50 +2,12 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Environments;
-using BenchmarkDotNet.Running;
 using Saplin.xOPS;
 
 namespace xOPS_Console
 {
-    [DisassemblyDiagnoser(printSource: true, printInstructionAddresses:true, exportHtml: true, maxDepth: 4)]
-    //[KeepBenchmarkFiles]
-    //[Config(typeof(Config))]
-    //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Mono)]
-    //[DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.Net472)]
-    [DryJob(BenchmarkDotNet.Jobs.RuntimeMoniker.NetCoreApp31)]
     public class Program
     {
-
-        //    private class Config : ManualConfig
-        //    {
-        //        public Config()
-        //        {
-        //            Add(DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator));
-        //        }
-        //    }
-
-        //static void Main()
-        //{
-        //    //var config = DefaultConfig.Instance.With(ConfigOptions.DisableOptimizationsValidator);
-        //    //BenchmarkRunner.Run<Program>(config);
-        //    BenchmarkRunner.Run<Program>();
-        //}
-
-        //[Benchmark]
-        //public void RunFloat32()
-        //{
-        //    var res = c.RunXops(1000000000, false, false);
-        //}
-
-        [Benchmark]
-        public void RunIntt32()
-        {
-            var res = c.RunXops(10000000, false, false);
-        }
-
         static Compute c = new Compute();
 
         private static ManualResetEventSlim stressTestEnd;
@@ -83,9 +45,9 @@ namespace xOPS_Console
 
                 Console.WriteLine("Duration:  (Warming up)");
                 Console.WriteLine("Start:");
-                Console.WriteLine("Now:");
                 Console.WriteLine("Min:");
                 Console.WriteLine("Max:");
+                Console.WriteLine("Now:");
 
                 stressTestLinesToReturn = 5;
 
