@@ -3,9 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!-- Required for disasm by BenchmarkDotNet -->
-    <PlatformTarget>AnyCPU</PlatformTarget>
+<!--    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <DebugSymbols>true</DebugSymbols>-->
         
     <!--<TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>-->
     <TargetFramework>netcoreapp3.1</TargetFramework>

@@ -195,7 +195,7 @@ namespace Saplin.xOPS
             prevInt32Y = y;
         }
 
-        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
         private void RunInops64Bit(int iterations)
         {
             Int64 counter = 0, increment = 1, max = iterations;
