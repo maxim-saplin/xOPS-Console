@@ -2,128 +2,234 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace xOPS_Console
 {
-    public static class AsciiTimeSeries
+
+    public class AsciiTimeSeries
     {
-        class YLabel
+        /// <summary>
+        /// Total height (outter) of the chart in lines
+        /// </summary>
+        public int HeigthLines { get; set; } = 10;
+
+        /// <summary>
+        /// Total width (outter) of the chart in characters/columns (PlotAreaWidth + YAxisAndLabelsWidth), unused columns are filled with EmptyChar
+        /// 0 - width is determined by the number of data point in the chart, the chart can grow infinitely.
+        /// If the width is > 0 (it's constrained) and number of data points is gtreater than plt can fit, only tail of the collection will be displayed.
+        /// </summary>
+        public int WidthCharacters { get; set; } = 0;
+
+        /// <summary>
+        /// The witdh of vertical Y axis determined by values/sizes of ticks, their format (LabelFormat) and margins (YLabelLeftPadding, YLabelRightPadding).
+        /// Essentialy it is the maximum with of padded tick label + 1 for the axis line
+        /// </summary>
+        public int YAxisAndLabelsWidth { get; private set; }
+
+        /// <summary>
+        /// The number of columns in plot area. It is determined as the difference of WidthCharacters-YAxisAndLabelsWidth (if the width is limited)
+        /// or grows with Series/SeriesModifiable number of items
+        /// </summary>
+        public int PlotAreaWidth { get; private set; }
+
+        /// <summary>
+        /// PlotAreaWidth+1. The number of data points that are visible/can fit in the plot area is greater by 1 than the number of columns.
+        /// If WidthCharacters is set this shows how many points can fit, otherwise how many data points there're now
+        /// </summary>
+        public int DataPoints => PlotAreaWidth + 1;
+
+        public char EmptyChar { get; set; } = ' ';
+
+        public char AbovePointChar { get; set; } = ' ';
+
+        public char BelowPointChar { get; set; } = ' ';
+
+        public string LabelFormat { get; set; } = "0.00";
+
+        public int YLabelLeftPadding { get; set; } = 1;
+
+        public int YLabelRightPadding { get; set; } = 1;
+
+        public double? Min { get; set; }
+
+        public double? Max { get; set; }
+
+        double? prevMin, prevMax;
+        int? prevPlotWidth, prevHeight, prevCount;
+
+        IEnumerable<double> series;
+
+        /// <summary>
+        /// Simplest way to build chart, though unlike SeriesModifiable not good for collections which can be modified in another thread, also doesn't support diff rerendering
+        /// </summary>
+        public IEnumerable<double> Series
         {
-            public double Value { get; set; }
-            public string Text { get; set; }
+            get => series;
+            set
+            {
+                series = value;
+                seriesModifiable = null;
+            }
         }
 
-        private static Tuple<string[], char[,]> BuildGraph(IList<double> series, AsciiOptions options = null, double? knownMin = null, double? knownMax = null)
+        IList<double> seriesModifiable;
+
+        /// <summary>
+        /// Use in multi-threaded environment if the series can be changed in other threads while the graph is being built (and avoid collection chamged exception in foreach)
+        /// </summary>
+        public IList<double> SeriesModifiable
         {
-            if (series.Count < 2) return null;
+            get => seriesModifiable;
+            set
+            {
+                seriesModifiable = value;
+                series = null;
+            }
+        }
 
-            options = options ?? new AsciiOptions();
+        string[] yAxis;
 
-            var min = knownMin.HasValue ? knownMin.Value : series.Min();
-            var max = knownMax.HasValue ? knownMax.Value : series.Max();
-            var count = series.Count;
+        char[,] plot;
+
+        int labelsAndAxisLength = 0;
+
+        void BuildGraph()
+        {
+            if (Series == null && SeriesModifiable == null) return;
+
+            IEnumerable<double> series = Series != null ? Series : SeriesModifiable;
+            var count = Series != null ? Series.Count() : SeriesModifiable.Count;
+
+            if (count < 2) return;
+
+            var min = Min.HasValue ? Min.Value : series.Min();
+            var max = Max.HasValue ? Max.Value : series.Max();
 
             var range = Math.Abs(max - min);
-            var bucket = range / (options.HeigthLines - 1);
-            var rows = options.HeigthLines;
+            var bucket = range / (HeigthLines - 1);
+            var yAxisChanged = false;
 
-            int maxLabelLength = 0;
-
-            var yAxisLabels = GetYAxisLabels(max, bucket, rows, options, out maxLabelLength);
-            var yAxis = CreateYAxis(yAxisLabels, series[0], bucket);
-
-            var labelsAndAxisLength = maxLabelLength + 1;
-
-            var xAreaWidth = count;
-            var i = 0;
-
-            if (options.MaxWidthCharacters > 0 && count + labelsAndAxisLength > options.MaxWidthCharacters)
+            if (yAxis == null || prevMin != min || prevMax != max ||  prevHeight != HeigthLines)
             {
-                xAreaWidth = options.MaxWidthCharacters - labelsAndAxisLength;
-                i = count - xAreaWidth;
+                BuildYAxis(min, max, bucket, HeigthLines, out labelsAndAxisLength);
+                prevMin = min;
+                prevMax = max;
+                prevHeight = HeigthLines;
+                yAxisChanged = true;
             }
 
-            var plot = CreatePlot(rows, xAreaWidth, options.EmptyChar); //y,x = row, column
-
+            PlotAreaWidth = count;
+            var startAt = 0;
+            var i = 0;
             var col = 0;
 
-            for (i = i; i < count - 2; i++)
+            if (WidthCharacters > 0)
             {
-                var currVal = series[i];
-                var nextVal = series[i + 1];
+                PlotAreaWidth = WidthCharacters - labelsAndAxisLength;
 
-                var curRow = (int)Math.Round((max - currVal) / bucket);
-                var nextRow = (int)Math.Round((max - nextVal) / bucket);
-                var diff = nextRow - curRow;
-
-                if (curRow == nextRow)
+                if (count > PlotAreaWidth+2)
                 {
-                    plot[curRow, col] = '─';
+                    startAt = count - PlotAreaWidth-2;
                 }
-                else if (curRow < nextRow)
-                {
-                    plot[curRow, col] = '╮';
-                    plot[nextRow, col] = '╰';
-                }
-                else if (curRow > nextRow)
-                {
-                    plot[curRow, col] = '╯';
-                    plot[nextRow, col] = '╭';
-                }
-
-                if (diff > 1)
-                {
-                    for (var k = curRow + 1; k < nextRow; k++)
-                        plot[k, col] = '│';
-                }
-                if (diff < -1)
-                {
-                    for (var k = curRow - 1; k > nextRow; k--)
-                        plot[k, col] = '│';
-                }
-
-                col++;
             }
 
-            return new Tuple<string[], char[,]>(yAxis, plot);
+            if (plot == null || prevPlotWidth != PlotAreaWidth || Series != null || yAxisChanged) // build the plot from scratch
+            {
+                BuildPlot(HeigthLines, PlotAreaWidth); //y,x = row, column
+                prevPlotWidth = PlotAreaWidth;
+            }
+            else if (prevCount.HasValue && startAt > 0) // try to shift existing plot and render only the diff, works only with SeriesModifiable
+            {
+                var diff = count - prevCount.Value;
+                ShiftColumnsLeft(plot, diff);
+                startAt = count - 2 - diff;
+                col = PlotAreaWidth  - diff;
+            }
+
+            prevCount = count;
+
+            if (Series != null)
+            {
+                var enumarator = series.GetEnumerator();
+
+                while (i < count - 2)
+                {
+                    if (i >= startAt)
+                    {
+                        var currVal = enumarator.Current;
+                        enumarator.MoveNext();
+                        var nextVal = enumarator.Current;
+
+                        ConnectDots(max, bucket, col, currVal, nextVal);
+
+                        col++;
+                        i++;
+                    }
+                    else
+                    {
+                        enumarator.MoveNext();
+                        i++;
+                    }
+                }
+            }
+            else
+            {
+                for (i = startAt; i < count - 2; i++)
+                {
+                    var currVal = SeriesModifiable[i];
+                    var nextVal = SeriesModifiable[i+1];
+
+                    ConnectDots(max, bucket, col, currVal, nextVal);
+
+                    col++;
+                }
+            }
         }
 
-        public static string SeriesToString(IList<double> series, AsciiOptions options = null, double? knownMin = null, double? knownMax = null )
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ConnectDots(double max, double bucket, int col, double currVal, double nextVal)
         {
-            Debug.Write("Building graph as string...");
+            var curRow = (int)Math.Round((max - currVal) / bucket);
+            var nextRow = (int)Math.Round((max - nextVal) / bucket);
+            var diff = nextRow - curRow;
 
-            var sw = new Stopwatch();
-            sw.Start();
+            if (curRow == nextRow)
+            {
+                plot[curRow, col] = '─';
+            }
+            else if (curRow < nextRow)
+            {
+                plot[curRow, col] = '╮';
+                plot[nextRow, col] = '╰';
+            }
+            else if (curRow > nextRow)
+            {
+                plot[curRow, col] = '╯';
+                plot[nextRow, col] = '╭';
+            }
 
-            var axisAndPlot = BuildGraph(series, options, knownMin, knownMax);
+            if (diff > 1)
+            {
+                for (var k = curRow + 1; k < nextRow; k++)
+                    plot[k, col] = '│';
+            }
+            if (diff < -1)
+            {
+                for (var k = curRow - 1; k > nextRow; k--)
+                    plot[k, col] = '│';
+            }
 
-            var s =  CombineToString(axisAndPlot.Item1, axisAndPlot.Item2);
 
-            sw.Start();
-            Debug.WriteLine(" Done, time(ms): "+sw.ElapsedMilliseconds);
+            for (var k = Math.Max(curRow, nextRow) + 1; k < HeigthLines; k++)
+                plot[k, col] = BelowPointChar;
 
-            return s;
+            for (var k = Math.Min(curRow, nextRow) - 1; k >= 0; k--)
+                plot[k, col] = AbovePointChar;
         }
 
-        public static string[] SeriesToLines(IList<double> series, AsciiOptions options = null, double? knownMin = null, double? knownMax = null)
-        {
-            Debug.Write("Building graph as lines...");
-
-            var sw = new Stopwatch();
-            sw.Start();
-
-            var axisAndPlot = BuildGraph(series, options, knownMin, knownMax);
-
-            var lines = CombineToLines(axisAndPlot.Item1, axisAndPlot.Item2);
-
-            sw.Start();
-            Debug.WriteLine(" Done, time(ms): " + sw.ElapsedMilliseconds);
-
-            return lines;
-        }
-
-        static double[] GetYAxisTicks(double max, double bucket, int rows)
+        double[] GetYAxisTicks(double max, double bucket, int rows)
         {
             var result = new double[rows];
 
@@ -135,62 +241,59 @@ namespace xOPS_Console
             return result;
         }
 
-        static IList<YLabel> GetYAxisLabels(double max, double bucket, int rows, AsciiOptions options, out int labelMaxLength)
+        void BuildYAxis(double min, double max, double bucket, int rows, out int labelMaxLength)
         {
             var yAxisTicks = GetYAxisTicks(max, bucket, rows);
-            var labels = new List<YLabel>(yAxisTicks.Length);
-            
-            foreach (var tick in yAxisTicks)
+
+            if (yAxis == null || prevHeight != HeigthLines)
+                yAxis = new string[HeigthLines];
+
+            labelMaxLength = max.ToString(LabelFormat).Length;
+
+            if (min.ToString(LabelFormat).Length > labelMaxLength) labelMaxLength = min.ToString(LabelFormat).Length;
+
+            labelMaxLength += YLabelLeftPadding;
+
+            var padRight = String.Empty.PadLeft(YLabelRightPadding);
+
+            for (int i = 0; i < yAxis.Length; i++)
             {
-                var label = new YLabel();
-                label.Value = tick;
-                label.Text = tick.ToString(options.LabelFormat);
-                labels.Add(label);
+                yAxis[i] = yAxisTicks[i].ToString(LabelFormat).PadLeft(labelMaxLength)+ padRight+ "┤";
             }
 
-            labelMaxLength = labels.Max(label => label.Text.Length) + options.LabelLeftMargin;
-
-            var padRight = String.Empty.PadLeft(options.LabelRightMargin);
-
-            foreach (var label in labels)
-            {
-                label.Text = label.Text.PadLeft(labelMaxLength) + padRight;
-            }
-
-            labelMaxLength += options.LabelRightMargin;
-
-            return labels;
+            labelMaxLength += YLabelRightPadding + 1;
         }
 
-        static string[] CreateYAxis(IList<YLabel> yAxisLabels, double firstValue, double bucket)
+        void BuildPlot(int rows, int cols)
         {
-            var axis = new string[yAxisLabels.Count];
-
-            for (var i = 0; i < yAxisLabels.Count; i++)
-            {
-                axis[i] = yAxisLabels[i].Text
-                    + ((Math.Abs(yAxisLabels[i].Value-firstValue) < bucket/2) ? "┼" : "┤");
-            }
-
-            return axis;
-        }
-
-        static char[,] CreatePlot(int rows, int cols, char emptyChar)
-        {
-            var array = new char[rows, cols];
+            if (plot == null || plot.GetUpperBound(0)+1 != rows || plot.GetUpperBound(1)+1 != cols)     
+                plot  = new char[rows, cols];
 
             for (var i = 0; i < rows; i++)
                 for (var k = 0; k < cols; k++)
                 {
-                    array[i,k] = emptyChar;
+                    plot[i, k] = EmptyChar;
                 }
-
-            return array;
         }
 
-        static string CombineToString(string[] yAxis, char[,] plot)
+        void ShiftColumnsLeft(char[,] plot, int n)
         {
-            if (yAxis.Length != plot.GetUpperBound(0)+1)
+            for (var i = 0; i < plot.GetUpperBound(0) + 1; i++)
+            {
+                for (var k = 0; k < plot.GetUpperBound(1) - n + 1; k++)
+                {
+                    plot[i, k] = plot[i, k + n];
+                }
+                for (var k = plot.GetUpperBound(1) - n + 1; k < plot.GetUpperBound(1) + 1; k++)
+                {
+                    plot[i, k] = EmptyChar;
+                }
+            }
+        }
+
+        string CombineToString(string[] yAxis, char[,] plot)
+        {
+            if (yAxis.Length != plot.GetUpperBound(0) + 1)
                 throw new InvalidOperationException("yAxis and plot must have same number of rows");
 
             var sb = new StringBuilder();
@@ -200,13 +303,13 @@ namespace xOPS_Console
                 sb.Append(yAxis[i]);
                 for (var k = 0; k <= plot.GetUpperBound(1); k++)
                     sb.Append(plot[i, k]); //y,x
-                if (i < yAxis.Length-1) sb.AppendLine();
+                if (i < yAxis.Length - 1) sb.AppendLine();
             }
 
             return sb.ToString();
         }
 
-        static string[] CombineToLines(string[] yAxis, char[,] plot)
+        string[] CombineToLines(string[] yAxis, char[,] plot)
         {
             if (yAxis.Length != plot.GetUpperBound(0) + 1)
                 throw new InvalidOperationException("yAxis and plot must have same number of rows");
@@ -214,7 +317,7 @@ namespace xOPS_Console
             var lines = new string[yAxis.Length];
             var sb = new StringBuilder();
 
-            for (int i = 0; i < yAxis.Length; i++)  
+            for (int i = 0; i < yAxis.Length; i++)
             {
                 sb.Append(yAxis[i]);
                 for (var k = 0; k <= plot.GetUpperBound(1); k++)
@@ -227,40 +330,65 @@ namespace xOPS_Console
             return lines;
         }
 
-        public static string MergeTwoGraphs(string[] first, string[] second, string split, int padRight = 0)
+        public string RenderToString()
         {
-            if (first.Length != second.Length)
+            Debug.Write("Building graph as string...");
+
+            var sw = new Stopwatch();
+            sw.Start();
+
+            BuildGraph();
+
+            var s = CombineToString(yAxis, plot);
+
+            sw.Stop();
+            Debug.WriteLine(" Done, time(ms): " + sw.ElapsedMilliseconds);
+
+            return s;
+        }
+
+        public string[] RenderToLines()
+        {
+            Debug.Write("Building graph as lines...");
+
+            var sw = new Stopwatch();
+            sw.Start();
+
+            BuildGraph();
+
+            var lines = CombineToLines(yAxis, plot);
+
+            sw.Stop();
+            Debug.WriteLine(" Done, time(ms): " + sw.ElapsedMilliseconds);
+
+            return lines;
+        }
+
+        public static string MergeTwoGraphs(AsciiTimeSeries first, AsciiTimeSeries second, string split, int padRight = 0)
+        {
+            var lines1 = first.RenderToLines();
+            var lines2 = second.RenderToLines();
+
+            if (lines1.Length != lines2.Length)
                 throw new InvalidOperationException("frist and second must have same number of elements");
 
             var sb = new StringBuilder();
 
-            for (int i = 0; i < first.Length; i++)
+            for (int i = 0; i < first.yAxis.Length; i++)
             {
-                sb.Append(first[i]);
-                if (first[i].Length < padRight) sb.Append(' ', padRight - first[i].Length);
+                sb.Append(lines1[i]);
+                if (lines1[i].Length < padRight) sb.Append(' ', padRight - lines1[i].Length);
 
-                sb.Append(second[i]);
-                if (second[i].Length < padRight) sb.Append(' ', padRight - second[i].Length);
+                sb.Append(split);
 
-                if (i < first.Length-1) sb.AppendLine();
+                sb.Append(lines2[i]);
+                if (lines2[i].Length < padRight) sb.Append(' ', padRight - lines2[i].Length);
+
+                if (i < lines1.Length - 1) sb.AppendLine();
             }
 
             return sb.ToString();
         }
-    }
 
-    public class AsciiOptions
-    {
-        public int HeigthLines { get; set; } = 10;
-
-        public int MaxWidthCharacters { get; set; } = 0;
-
-        public char EmptyChar { get; set; } = ' ';
-
-        public string LabelFormat { get; set; } = "0.00";
-
-        public int LabelLeftMargin { get; set; } = 1;
-
-        public int LabelRightMargin { get; set; } = 1;
     }
 }
