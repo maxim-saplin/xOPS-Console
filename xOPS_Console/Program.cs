@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Saplin.TimeSeries;
 using Saplin.xOPS;
 
 namespace xOPS_Console
@@ -19,22 +20,22 @@ namespace xOPS_Console
             Console.Clear();
             Console.WriteLine("xOPS CPU Benchmark");
 
-            //Run(c, n, 1, inops: false, precision64Bit: false, useTasks: false);
-            //Run(c, n, 1, inops: true, precision64Bit: false, useTasks: false);
-            ////Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
-            ////Run(c, n, 1, inops: true, precision64Bit: true, useTasks: false);
+            Run(c, n, 1, inops: false, precision64Bit: false, useTasks: false);
+            Run(c, n, 1, inops: true, precision64Bit: false, useTasks: false);
+            //Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
+            //Run(c, n, 1, inops: true, precision64Bit: true, useTasks: false);
 
-            //int tpT, tpP;
+            int tpT, tpP;
 
-            //ThreadPool.GetMaxThreads(out tpT, out tpP);
-            //Console.WriteLine("\nCores: " + Environment.ProcessorCount + "; timer freq: " + Stopwatch.Frequency);
+            ThreadPool.GetMaxThreads(out tpT, out tpP);
+            Console.WriteLine("\nCores: " + Environment.ProcessorCount + "; timer freq: " + Stopwatch.Frequency);
 
-            //var threads = Environment.ProcessorCount * 2;
+            var threads = Environment.ProcessorCount * 2;
 
-            //Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
-            //Run(c, n, threads, inops: true, precision64Bit: false, useTasks: false);
-            ////Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
-            ////Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
+            Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
+            Run(c, n, threads, inops: true, precision64Bit: false, useTasks: false);
+            //Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
+            //Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
 
 
             Console.WriteLine("\nWARNING! Stress Test may lead to CPU overheating and damages. \n" +
@@ -46,14 +47,13 @@ namespace xOPS_Console
             {
                 Console.WriteLine("\nStress testing on {0} threads... Press any key to stop\n", Environment.ProcessorCount * 2);
 
-                stressTestLinesCursorTop = Console.CursorTop;
-                stressTestWindowHeight = Console.WindowHeight;
-
                 Console.WriteLine("Duration:  (Warming up)");
                 Console.WriteLine("Start:");
                 Console.WriteLine("Min:");
                 Console.WriteLine("Max:");
                 Console.WriteLine("Now:");
+
+                stressTestLinesCursorTopDiff = 5;
 
                 stressTestEnd = new ManualResetEventSlim(false);
 
@@ -67,7 +67,7 @@ namespace xOPS_Console
             }
         }
 
-        static int stressTestLinesCursorTop = 0;
+        static int stressTestLinesCursorTopDiff = 0;
         static int stressTestWindowHeight = 0;
 
         private static void Run(Compute c, int n, int threads, bool inops, bool precision64Bit, bool useTasks)
@@ -129,7 +129,7 @@ namespace xOPS_Console
 
                 lock (sender)
                 {
-                    Console.CursorTop = stressTestLinesCursorTop;
+                    Console.CursorTop -= stressTestLinesCursorTopDiff;
                     Debug.WriteLine("Before Text, Console.CursorTop: " + Console.CursorTop);
 
                     Console.CursorLeft = 10;
@@ -146,15 +146,22 @@ namespace xOPS_Console
                     if (flopsGraph == null)
                     {
                         var graphWidth = Console.WindowWidth / 2 - 1;
-                        var graphHeight = Console.WindowHeight - Console.CursorTop;
+                        var graphHeight = 10;
+
+                        for (int i = 0; i < graphHeight; i++)
+                            Console.WriteLine();
+
+                        stressTestLinesCursorTopDiff += graphHeight -1;
+
+                        Console.CursorTop -= graphHeight;
 
                         flopsGraph = new AsciiTimeSeries()
-                        { HeigthLines = graphHeight, WidthCharacters = graphWidth, LabelFormat = "0.00", AbovePointChar = '·', EmptyChar = '|' };
+                        { HeigthLines = graphHeight, WidthCharacters = graphWidth, LabelFormat = "0.00", AbovePointChar = '·', EmptyChar = '|', YAxisAndLabelsWidth = 7, YLabelRightPadding = 0 };
                         inopsGraph = new AsciiTimeSeries()
-                        { HeigthLines = graphHeight, WidthCharacters = graphWidth, LabelFormat = "0.00", AbovePointChar = '·', EmptyChar = '|' };
+                        { HeigthLines = graphHeight, WidthCharacters = graphWidth, LabelFormat = "0.00", AbovePointChar = '·', EmptyChar = '|', YAxisAndLabelsWidth = 7, YLabelRightPadding = 0 };
 
                         flopsGraph.Series = sender.TimeSeries[0].Results;
-                        inopsGraph.SeriesModifiable = sender.TimeSeries[1].Results;
+                        inopsGraph.Series = sender.TimeSeries[1].Results;
                     }
 
                     flopsGraph.Min = 0;//sender.TimeSeries[0].MinValue;
