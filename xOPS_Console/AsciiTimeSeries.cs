@@ -22,6 +22,11 @@ namespace Saplin.TimeSeries
         /// </summary>
         public int WidthCharacters { get; set; } = 0;
 
+        /// <summary>
+        /// If grpah width is contrained (WidthCharecters is greater than 0) by default only tail of the series if displayed.
+        /// To scale the series and fit the complete data set into the chart then set this property to false
+        /// </summary>
+        public bool ShowOnlyTail { get; set; } = true;
 
         /// <summary>
         /// The number of columns in plot area. It is determined as the difference of WidthCharacters-YAxisAndLabelsWidth (if the width is limited)
@@ -70,10 +75,7 @@ namespace Saplin.TimeSeries
         public IEnumerable<double> Series
         {
             get => series;
-            set
-            {
-                series = value;
-            }
+            set => series = value;
         }
 
         string[] yAxis;
@@ -83,6 +85,8 @@ namespace Saplin.TimeSeries
         int labelsAndAxisLength = 0;
 
         IList<double> prevSeriesModifiable = null;
+
+        bool builtUsingShrink = false;
 
         void BuildGraph()
         {
@@ -96,6 +100,8 @@ namespace Saplin.TimeSeries
 
             var min = Min.HasValue ? Min.Value : series.Min();
             var max = Max.HasValue ? Max.Value : series.Max();
+
+            if (min == max) { min -= 1; ; max += 1; }
 
             var range = Math.Abs(max - min);
             var bucket = range / (HeigthLines - 1);
@@ -127,11 +133,20 @@ namespace Saplin.TimeSeries
 
                 if (count > PlotAreaWidth + 2)
                 {
-                    startAtCollectionIndex = count - PlotAreaWidth - 2;
+                    if (!ShowOnlyTail)
+                    {
+                        seriesModifiable = null;
+                        count = PlotAreaWidth + 1;// more data points fit by 1
+                        series = ShrinkCollection(series, count);
+                    }
+                    else startAtCollectionIndex = count - PlotAreaWidth - 2;
                 }
             }
 
-            if (plot == null || prevPlotWidth != PlotAreaWidth || seriesModifiable == null || yAxisChanged) // build the plot from scratch
+            if (
+                plot == null || prevPlotWidth != PlotAreaWidth ||
+                seriesModifiable == null ||
+                seriesModifiable != prevSeriesModifiable || yAxisChanged) // build the plot from scratch
             {
                 BuildPlot(HeigthLines, PlotAreaWidth); //y,x = row, column
                 prevPlotWidth = PlotAreaWidth;
@@ -140,7 +155,7 @@ namespace Saplin.TimeSeries
             {
                 var diff = count - prevCount.Value;
 
-                if (startAtCollectionIndex > 0) // there're more data points more than columns, shift existing plot and render only the diff, works only with seriesModifiable/IList
+                if (startAtCollectionIndex > 0) // there're more data points than columns, shift existing plot and render only the diff, works only with seriesModifiable/IList
                 {
                     ShiftColumnsLeft(plot, diff);
                     startAtCollectionIndex = count - 2 - diff;
@@ -159,6 +174,7 @@ namespace Saplin.TimeSeries
             if (seriesModifiable == null)
             {
                 var enumarator = series.GetEnumerator();
+                enumarator.MoveNext();
 
                 while (i < count - 2)
                 {
@@ -291,13 +307,15 @@ namespace Saplin.TimeSeries
 
         int plotRows, plotCols;
 
+        const int plotGrowByCols = 100;
+
         void BuildPlot(int rows, int cols)
         {
             plotRows = rows;
             plotCols = cols;
             //if plot matrix happens to be bigger than needed, keep it and stor only the bound
             if (plot == null || plot.GetUpperBound(0) + 1 < rows || plot.GetUpperBound(1) + 1 < cols)
-                plot = new char[rows, cols];
+                plot = new char[rows, (int)Math.Ceiling(cols / (double)plotGrowByCols) * plotGrowByCols];
 
             for (var i = 0; i < rows; i++)
                 for (var k = 0; k < cols; k++)
@@ -420,5 +438,55 @@ namespace Saplin.TimeSeries
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Shrink the collectiong to a smaller size and recalculate numbers so it could fit into a smaller plot
+        /// </summary>
+        /// <param name="source">Source collection</param>
+        /// <param name="toN">The number of elements in the resulting collection</param>
+        /// <returns>New collection if toN is greater than the number of elements in source. Otherwise the original collection is returned</returns>
+        public static IEnumerable<double> ShrinkCollection(IEnumerable<double> source, int toN)
+        {
+            var sourceCount = source.Count();
+            var destCount = toN;
+
+            var ratio = (double)sourceCount / destCount;
+
+            if (ratio <= 1) return source;
+
+
+            var dest = new double[destCount];
+
+
+            int bin = 0;
+            int counter = 0;
+            double accum = 0;
+            int prevIndex = 0;
+            int curIndex;
+
+            foreach (var val in source)
+            {
+                curIndex = (int)Math.Floor((double)counter / ratio);
+
+                if (prevIndex != curIndex)
+                {
+                    dest[prevIndex] = accum / bin;
+                    bin = 0;
+                    accum = 0;
+                    prevIndex = curIndex;
+                }
+
+                accum += val;
+                bin++;
+
+                counter++;
+            }
+
+            dest[destCount - 1] = accum / bin;
+
+            //dest[0] = source.First();
+            //dest[destCount - 1] = source.Last();                  
+
+            return dest;
+        }
     }
 }
