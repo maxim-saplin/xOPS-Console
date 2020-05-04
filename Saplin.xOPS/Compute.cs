@@ -31,7 +31,7 @@ namespace Saplin.xOPS
         /// <param name="precision64bit">64 bit or not (32 bit)</param>
         /// <returns></returns>
 
-        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public double RunXops(int iterations, bool inops, bool precision64bit)
         {
             breakCalled = false;
@@ -227,6 +227,7 @@ namespace Saplin.xOPS
         CountdownEvent threadsDoneCountdown = new CountdownEvent(1);
         CountdownEvent threadsReadyCountdown = new CountdownEvent(1);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SingleThreadBody(int iterations, bool inops = false, bool precision64Bit = false)
         {
 
@@ -258,7 +259,7 @@ namespace Saplin.xOPS
         /// Using tasks may lead to pauses and stalling (tens of seconds), seems like snatdard schedulaer doesn't kick off all tasks right away and they keep waiting for a long time. No such problem with threads
         /// </remarks>
         ///<returns>Seconds it took to complete the calculations</returns>
-        public Double RunXopsMultiThreaded(int iterations, int threads, bool inops = false, bool precision64Bit = false, bool useTasks = false)
+        public Double RunXopsMultiThreaded(int iterations, int threads, bool inops = false, bool precision64Bit = false)
         {
             runningInMtMode = true;
             
@@ -268,9 +269,6 @@ namespace Saplin.xOPS
             threadLoopCounter = 0;
 
             thrds = new Thread[threads];
-            var tasks = new Task[threads];
-
-            Debug.WriteLine("Multi-" + (useTasks ? "Tasks" : "Threads"));
 
             threadsDoneCountdown.Reset(threads);
             threadsReadyCountdown.Reset(threads);
@@ -278,18 +276,10 @@ namespace Saplin.xOPS
 
             for (int i = 0; i < threads; i++)
             {
-                if (!useTasks)
-                {
-                    // TODO, check values are properly passed to delefate for already created threads
-                    thrds[i] = new Thread(() => { SingleThreadBody(iterations, inops, precision64Bit); });
-                    thrds[i].IsBackground = true;
-                    thrds[i].Start();
-                }
-                else
-                {
-                    tasks[i] = new Task(() => { SingleThreadBody(iterations, inops, precision64Bit); });
-                    tasks[i].Start();
-                }
+                // TODO, check values are properly passed to delefate for already created threads
+                thrds[i] = new Thread(() => { SingleThreadBody(iterations, inops, precision64Bit); });
+                thrds[i].IsBackground = true;
+                thrds[i].Start();
             }
 
             threadsReadyCountdown.Wait();

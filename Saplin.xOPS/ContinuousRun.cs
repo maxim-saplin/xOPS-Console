@@ -36,6 +36,8 @@ namespace Saplin.xOPS
 
         private int warmUpCounter;
 
+        double periodSeconds = 1;
+
         public void Start()
         {
             sw.Restart();
@@ -44,6 +46,8 @@ namespace Saplin.xOPS
 
             foreach (var p in providers)
                 p.Start();
+
+            periodSeconds = (double)SamplingPeriodMs / 1000;
             
             timer.Interval = SamplingPeriodMs;
             timer.AutoReset = true;
@@ -63,26 +67,28 @@ namespace Saplin.xOPS
 
         private void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
-            if (warmUpCounter >= 1)
+            if (!WarmpingUp)
             {
-                warmUpCounter--;
-            }
-            if (warmUpCounter == 0)
-            {
-                foreach (var p in providers)
-                {
-                    p.EndWarmUp();
-                }
-                warmUpCounter--;
-            }
-            else
-            {
-                WarmpingUp = false;
-
                 for (int i = 0; i < results.Count; i++)
                 {
                     var r = providers[i].GetResult();
+                    r /= periodSeconds;
                     results[i].Add(r);
+                }
+            }
+            else
+            {
+                if (warmUpCounter >= 1)
+                {
+                    warmUpCounter--;
+                }
+                else
+                {
+                    foreach (var p in providers)
+                    {
+                        p.EndWarmUp();
+                    }
+                    WarmpingUp = false;
                 }
             }
 

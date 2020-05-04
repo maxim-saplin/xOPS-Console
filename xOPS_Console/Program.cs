@@ -20,8 +20,8 @@ namespace xOPS_Console
             Console.Clear();
             Console.WriteLine("xOPS CPU Benchmark");
 
-            Run(c, n, 1, inops: false, precision64Bit: false, useTasks: false);
-            Run(c, n, 1, inops: true, precision64Bit: false, useTasks: false);
+            Run(c, n, 1, inops: false, precision64Bit: false);
+            Run(c, n, 1, inops: true, precision64Bit: false);
             //Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
             //Run(c, n, 1, inops: true, precision64Bit: true, useTasks: false);
 
@@ -32,8 +32,8 @@ namespace xOPS_Console
 
             var threads = Environment.ProcessorCount * 2;
 
-            Run(c, n, threads, inops: false, precision64Bit: false, useTasks: false);
-            Run(c, n, threads, inops: true, precision64Bit: false, useTasks: false);
+            Run(c, n, threads, inops: false, precision64Bit: false);
+            Run(c, n, threads, inops: true, precision64Bit: false);
             //Run(c, n, threads, inops: false, precision64Bit: true, useTasks: false);
             //Run(c, n, threads, inops: true, precision64Bit: true, useTasks: false);
 
@@ -70,7 +70,7 @@ namespace xOPS_Console
         static int stressTestLinesCursorTopDiff = 0;
         static int stressTestWindowHeight = 0;
 
-        private static void Run(Compute c, int n, int threads, bool inops, bool precision64Bit, bool useTasks)
+        private static void Run(Compute c, int n, int threads, bool inops, bool precision64Bit)
         {
             const int repeats = 3;
 
@@ -81,7 +81,7 @@ namespace xOPS_Console
                 inops ? "INT" : "FLT",
                 precision64Bit ? "64" : "32",
                 threads,
-                useTasks ? "task(s)" : "thread(s)",
+                "thread(s)",
                 n);
 
             Console.Write(inops ? "G_INOPS: " : "G_FLOPS: ");
@@ -95,7 +95,7 @@ namespace xOPS_Console
                 }
                 else if (inops && threads > 1)
                 {
-                    times[i] = c.RunXopsMultiThreaded(n, threads, inops: true, precision64Bit: precision64Bit, useTasks: useTasks);
+                    times[i] = c.RunXopsMultiThreaded(n, threads, inops: true, precision64Bit: precision64Bit);
                     gxops[i] = (double)Compute.inopsPerIteration * n * threads / times[i] / 1000000000;
                 }
                 else if (!inops && threads == 1)
@@ -106,7 +106,7 @@ namespace xOPS_Console
                 }
                 else if (!inops && threads > 1)
                 {
-                    times[i] = c.RunXopsMultiThreaded(n, threads, inops: false, precision64Bit: precision64Bit, useTasks: useTasks);
+                    times[i] = c.RunXopsMultiThreaded(n, threads, inops: false, precision64Bit: precision64Bit);
                     gxops[i] = (double)Compute.flopsPerIteration * n * threads / times[i] / 1000000000;
                 }
 

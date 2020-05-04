@@ -9,7 +9,7 @@
 
         public override void Start()
         {
-            compute.RunXopsMultiThreaded(-1, threads, true, false, false);
+            compute.RunXopsMultiThreaded(-1, threads, true, false);
             counter = 0;
         }
     }
