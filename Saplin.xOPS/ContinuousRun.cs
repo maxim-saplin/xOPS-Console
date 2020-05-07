@@ -7,31 +7,31 @@ namespace Saplin.xOPS
 {
     public class ContinuousRun
     {
-        public int SamplingPeriodMs { get; set; }
+        public int SamplingPeriodMs { get; private set; }
 
         /// <summary>
         /// Use N points to smooth such values as Current, Start
         /// </summary>
-        public int SmoothingPoints { get; set; }
+        public int SmoothingPoints { get; private set; }
 
         /// <summary>
         /// Skip few samples and let the run warm up
         /// </summary>
-        public int WarmpUpSamples { get; set; }
+        public int WarmpUpSamples { get; private set; }
 
-        public bool WarmpingUp { get; set; }
+        public bool WarmpingUp { get; private set; }
 
         private Timer timer = new Timer();
         private Stopwatch sw = new Stopwatch();
 
         public TimeSpan Elapsed => sw.Elapsed;
 
-        public ContinuousRun()
+        public ContinuousRun(int samplingPeriodMs, int smoothingPoints, int warmpUpSamples)
         {
-            SamplingPeriodMs = 1000;
+            SamplingPeriodMs = samplingPeriodMs;
             timer.Elapsed += OnTimedEvent;
-            SmoothingPoints = 3;
-            WarmpUpSamples = 2;
+            SmoothingPoints = smoothingPoints;
+            WarmpUpSamples = warmpUpSamples;
         }
 
         private int warmUpCounter;
@@ -103,7 +103,7 @@ namespace Saplin.xOPS
         public void AddProvider(IResultProvider provider)
         {
             providers.Add(provider);
-            results.Add(new TimeSeries() { SmoothingPoints = this.SmoothingPoints});
+            results.Add(new TimeSeries(SmoothingPoints));
         }
 
         public delegate void EventHandler(ContinuousRun sender);

@@ -1,92 +1,84 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace Saplin.xOPS
 {
     public class TimeSeries
     {
-        public TimeSeries()
+        public TimeSeries(int smoothingPoints)
         {
-            SmoothingPoints = 3;
-            MinValue = double.MaxValue;
-            MaxValue = double.MinValue;
+            SmoothingPoints = smoothingPoints;
+            Min = MinSmooth = double.MaxValue;
+            Max = MaxSmooth = double.MinValue;
         }
-
-        private int smoothingPoints;
 
         /// <summary>
         /// Use N points to smooth such values as Current, Start
         /// </summary>
-        public int SmoothingPoints {
-            get => smoothingPoints;
-            set { smoothingPoints = value;  startValue = -1; }
-        }
+        public int SmoothingPoints { get; private set; }
 
-        private int warmpUpSamples;
-
-        private double startValue = -1;
-
-        public double StartValue
+        public double StartSmooth
         {
             get
             {
-                if (startValue > 0) return startValue;
+                if (smoothResults.Count > 0) return smoothResults[0];
 
-                var count = results.Count - warmpUpSamples;
-
-                if (count <= 0) return -1;
-
-                double res = 0;
-                int min = Math.Min(SmoothingPoints, count);
-
-                for (int i = warmpUpSamples; i < min+warmpUpSamples; i++)
-                {
-                    res += results[i];
-                }
-
-                res /= min;
-
-                if (min == SmoothingPoints) startValue = res;
-
-                return res;
+                return -1;
             }
         }
 
-        public double CurrentValue
+        public double CurrentSmooth
         {
             get
             {
-                if (results.Count == 0) return -1;
+                if (smoothResults.Count > 0) return smoothResults[smoothResults.Count-1];
 
-                double res = 0;
-                int min = Math.Min(SmoothingPoints, results.Count);
-
-                for (int i = results.Count - 1; i >= results.Count - min; i--)
-                {
-                    res += results[i];
-                }
-
-                res /= min;
-
-                return res;
+                return -1;
             }
         }
 
-        public double MinValue { get; protected set; }
+        public double Min { get; protected set; }
 
-        public double MaxValue { get; protected set; }
+        public double Max { get; protected set; }
+
+        public double MinSmooth { get; protected set; }
+
+        public double MaxSmooth { get; protected set; }
 
         private List<double> results = new List<double>();
+        private List<double> smoothResults = new List<double>();
 
         public ReadOnlyCollection<double> Results => results.AsReadOnly();
 
+        public ReadOnlyCollection<double> SmoothResults => smoothResults.AsReadOnly();
+
+        int counter = 0;
+
         public void Add(double value)
         {
-            if (value < MinValue) MinValue = value;
-            if (value > MaxValue) MaxValue = value;
+            if (value < Min) Min = value;
+            if (value > Max) Max = value;
 
             results.Add(value);
+
+            counter++;
+
+            if (counter >= SmoothingPoints)
+            {
+                counter = 0;
+
+                double smooth = 0;
+
+                for (int i = results.Count - 1; i > results.Count - SmoothingPoints - 1; i--)
+                    smooth += results[i];
+
+                smooth /= SmoothingPoints;
+
+                if (smooth < MinSmooth) MinSmooth = smooth;
+                if (smooth > MaxSmooth) MaxSmooth = smooth;
+
+                smoothResults.Add(smooth);
+            }
         }
     }
 }

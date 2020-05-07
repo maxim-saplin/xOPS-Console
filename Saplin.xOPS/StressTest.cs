@@ -6,7 +6,8 @@
         /// Set floating and integer tests
         /// </summary>
         /// <param name="threadsEach">Number of threads to created in floating and integer test (total threads created is a double)</param>
-        public StressTest(int threadsEach, bool gflops = true, bool ginops = true)
+        public StressTest(int samplingPeriodMs, int smoothingPoints, int warmpUpSamples, int threadsEach, bool gflops = true, bool ginops = true)
+            : base(samplingPeriodMs, smoothingPoints, warmpUpSamples)
         {
             if (gflops)
             {

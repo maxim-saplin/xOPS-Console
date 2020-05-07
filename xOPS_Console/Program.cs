@@ -57,7 +57,7 @@ namespace xOPS_Console
 
                 stressTestEnd = new ManualResetEventSlim(false);
 
-                var stressTest = new StressTest(Environment.ProcessorCount) { SamplingPeriodMs = 1000, WarmpUpSamples = 0 };
+                var stressTest = new StressTest(1000, 3, 3, Environment.ProcessorCount);
                 stressTest.ResultsUpdated += StressTestUpdate;
                 stressTest.Start();
 
@@ -135,13 +135,13 @@ namespace xOPS_Console
                     Console.CursorLeft = 10;
                     Console.WriteLine(sender.Elapsed.ToString());
                     Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].StartValue, sender.TimeSeries[1].StartValue);
+                    Console.WriteLine(fs, sender.TimeSeries[0].StartSmooth, sender.TimeSeries[1].StartSmooth);
                     Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].MinValue, sender.TimeSeries[1].MinValue);
+                    Console.WriteLine(fs, sender.TimeSeries[0].Min, sender.TimeSeries[1].Min);
                     Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].MaxValue, sender.TimeSeries[1].MaxValue);
+                    Console.WriteLine(fs, sender.TimeSeries[0].Max, sender.TimeSeries[1].Max);
                     Console.CursorLeft = 10;
-                    Console.WriteLine(fs, sender.TimeSeries[0].CurrentValue, sender.TimeSeries[1].CurrentValue);
+                    Console.WriteLine(fs, sender.TimeSeries[0].CurrentSmooth, sender.TimeSeries[1].CurrentSmooth);
 
                     if (flopsGraph == null)
                     {
@@ -165,10 +165,10 @@ namespace xOPS_Console
                     }
 
                     flopsGraph.Min = 0;//sender.TimeSeries[0].MinValue;
-                    flopsGraph.Max = sender.TimeSeries[0].MaxValue;
+                    flopsGraph.Max = sender.TimeSeries[0].Max;
 
                     inopsGraph.Min = 0;// sender.TimeSeries[1].MinValue;
-                    inopsGraph.Max = sender.TimeSeries[1].MaxValue;
+                    inopsGraph.Max = sender.TimeSeries[1].Max;
 
                     var graphs = AsciiTimeSeries.MergeTwoGraphs(flopsGraph, inopsGraph, "#");
 
