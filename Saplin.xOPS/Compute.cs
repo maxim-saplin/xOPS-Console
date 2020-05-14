@@ -168,7 +168,7 @@ namespace Saplin.xOPS
             prevDoubleY = y;
         }
 
-        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private void RunInops32Bit(int iterations)
         {
             Int32 counter = 0, increment = 1, max = iterations;
@@ -195,7 +195,7 @@ namespace Saplin.xOPS
             prevInt32Y = y;
         }
 
-        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private void RunInops64Bit(int iterations)
         {
             Int64 counter = 0, increment = 1, max = iterations;
@@ -279,6 +279,7 @@ namespace Saplin.xOPS
                 // TODO, check values are properly passed to delefate for already created threads
                 thrds[i] = new Thread(() => { SingleThreadBody(iterations, inops, precision64Bit); });
                 thrds[i].IsBackground = true;
+                thrds[i].Priority = ThreadPriority.Lowest; // UI thread gets stalled on WPF
                 thrds[i].Start();
             }
 
