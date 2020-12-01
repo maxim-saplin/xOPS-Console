@@ -1,0 +1,6 @@
+
+Linux x64:
+dotnet publish xOPS_Console/xOPS_Console.csproj -c release -r linux-x64 -o xOPS_Console/output -p:PublishSingleFile=true --self-contained true
+
+Linux ARM 32-bit
+dotnet publish xOPS_Console/xOPS_Console.csproj -c release -r linux-arm -o xOPS_Console/output -p:PublishSingleFile=true --self-contained true
