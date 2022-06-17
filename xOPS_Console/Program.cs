@@ -22,8 +22,8 @@ namespace xOPS_Console
 
             Run(c, n, 1, inops: false, precision64Bit: false);
             Run(c, n, 1, inops: true, precision64Bit: false);
-            //Run(c, n, 1, inops: false, precision64Bit: true, useTasks: false);
-            //Run(c, n, 1, inops: true, precision64Bit: true, useTasks: false);
+            //Run(c, n, 1, inops: false, precision64Bit: true);
+            //Run(c, n, 1, inops: true, precision64Bit: true);
 
             int tpT, tpP;
 
